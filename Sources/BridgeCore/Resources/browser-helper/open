@@ -1,0 +1,4 @@
+#!/bin/sh
+# Used only in the environment of an embedded OIDC login. Boundary prints the
+# authorization URL to stdout; Bridge opens it in its own isolated WebView.
+exit 0
