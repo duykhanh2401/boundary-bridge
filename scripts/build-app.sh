@@ -2,13 +2,23 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-if [[ "${1:-}" != "--skip-build" ]]; then
+skip_build=false
+app="${BRIDGE_APP_OUTPUT:-dist/Boundary Bridge.app}"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --skip-build) skip_build=true; shift;;
+    --output)
+      if [[ $# -lt 2 || -z "$2" ]]; then echo "Missing --output path" >&2; exit 1; fi
+      app="$2"; shift 2;;
+    *) echo "Usage: $0 [--skip-build] [--output PATH]" >&2; exit 1;;
+  esac
+done
+
+if ! "$skip_build"; then
   swift build -c release --product BoundaryBridge
   swift build -c release --product BridgeIcon
 fi
 
-app="${BRIDGE_APP_OUTPUT:-dist/Boundary Bridge.app}"
-if [[ "${2:-}" == "--output" ]]; then app="$3"; fi
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources/cli" .build/Bridge.iconset
 cp .build/release/BoundaryBridge "$app/Contents/MacOS/BoundaryBridge"
 mkdir -p "$app/Contents/Resources/BridgeResources"
@@ -38,8 +48,8 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
   <key>CFBundleName</key><string>Boundary Bridge</string>
   <key>CFBundleDisplayName</key><string>Boundary Bridge</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>1.1.1</string>
-  <key>CFBundleVersion</key><string>3</string>
+  <key>CFBundleShortVersionString</key><string>1.1.2</string>
+  <key>CFBundleVersion</key><string>4</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>LSMinimumSystemVersion</key><string>13.0</string>
   <key>NSHighResolutionCapable</key><true/>
@@ -51,3 +61,4 @@ PLIST
 codesign --force --sign - "$app"
 codesign --verify --deep --strict "$app"
 echo "Built: $PWD/$app"
+echo "Local ad-hoc build: downloaded copies will trigger Gatekeeper. Use scripts/package-release.sh for distribution."

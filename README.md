@@ -14,7 +14,7 @@ App native macOS thay thế giao diện Boundary Desktop cho luồng đăng nh�
 
 ## Sử dụng
 
-Tải bản đóng gói tại [GitHub Releases](https://github.com/duykhanh2401/boundary-bridge/releases/latest). File `Boundary-Bridge-1.1.1-macos-arm64.zip` dành cho Mac Apple Silicon (M1 trở lên), yêu cầu macOS 13+. Giải nén rồi kéo **Boundary Bridge.app** vào Applications. Bản phát hành kèm Boundary CLI và license tương ứng; app ký ad-hoc, chưa được Apple notarize nên macOS có thể chặn lần mở đầu tiên. Mac Intel cần tự build từ mã nguồn trên máy Intel.
+Tải bản đóng gói tại [GitHub Releases](https://github.com/duykhanh2401/boundary-bridge/releases/latest). File `Boundary-Bridge-1.1.2-macos-arm64-unnotarized.zip` dành cho Mac Apple Silicon (M1 trở lên), yêu cầu macOS 13+. Giải nén rồi kéo **Boundary Bridge.app** vào Applications. Bản phát hành kèm Boundary CLI và license tương ứng; app ký ad-hoc, chưa được Apple notarize nên macOS có thể chặn lần mở đầu tiên. Mac Intel cần tự build từ mã nguồn trên máy Intel.
 
 Các bước bên dưới dùng đường dẫn `dist/` khi build từ mã nguồn; nếu tải bản phát hành, mở app đã giải nén hoặc app trong Applications.
 
@@ -44,7 +44,7 @@ Bản 1.1.1 sửa bước tự điền OTP sau khi chuyển trang hoặc khi for
 
 Các nút bắt đầu tunnel, Kết nối tất cả và kết nối trên thanh menu bị khóa cho đến khi đăng nhập thành công. Đăng nhập đang xử lý, bị hủy hoặc thất bại không mở khóa kết nối.
 
-Bản cập nhật được đóng gói tại `dist/v1.1.1/Boundary Bridge.app`. Thoát bản cũ rồi mở bản này; cấu hình target/port được giữ nguyên. Không chạy đồng thời hai phiên bản để tránh ghi đè cấu hình.
+Bản cập nhật được đóng gói tại `dist/v1.1.2/Boundary Bridge.app`. Thoát bản cũ rồi mở bản này; cấu hình target/port được giữ nguyên. Không chạy đồng thời hai phiên bản để tránh ghi đè cấu hình.
 
 ## Đăng nhập và CLI
 
@@ -85,6 +85,43 @@ Bộ 17 checks (18 khi bật `--keychain`) dùng Foundation để chạy đượ
 CLI giả chỉ chạy trên localhost, không gọi controller thật hoặc đọc token. Đăng nhập SSO/LDAP/password và kết nối controller thực tế cần kiểm tra với hệ thống của bạn; không có tài khoản/controller được cấu hình sẵn.
 
 App được ký ad-hoc để chạy nội bộ, chưa notarize để phân phối rộng rãi. Build script giữ nguyên binary/license CLI; sản phẩm Boundary gốc không bị sửa hoặc gỡ cài đặt. Phiên bản này tập trung **TCP targets**, chưa triển khai tính năng transparent sessions, SSH credential injection hay giao diện quản trị Boundary.
+
+## Tải app từ GitHub và cảnh báo macOS
+
+Bản 1.1.2 hiện ký **ad-hoc**, chưa có Developer ID và chưa được Apple notarize. Việc chạy được trên máy build không có nghĩa là Gatekeeper cho phép mở bản tải từ Internet. Đổi tên ZIP, đăng lại lên GitHub hoặc ký ad-hoc lại không làm Apple xác minh nhà phát triển.
+
+Nếu tin cậy bản phát hành này, giải nén ZIP, kéo app vào Applications, thử mở app rồi vào **System Settings → Privacy & Security → Open Anyway → Open**. macOS sẽ lưu ngoại lệ cho riêng app. Máy do tổ chức quản lý có thể không cho phép thao tác này. Xem [hướng dẫn chính thức của Apple](https://support.apple.com/en-us/102445). Nếu thông báo là app bị hỏng hoặc đã bị sửa, cần kiểm tra lại file tải xuống và chữ ký trước; đây là lỗi khác với nhà phát triển chưa được xác minh.
+
+### Đóng gói để chia sẻ khi chưa có Apple Developer
+
+```sh
+./scripts/package-release.sh \
+  --app 'dist/v1.1.2/Boundary Bridge.app' \
+  --output dist/releases/1.1.2-internal \
+  --adhoc
+```
+
+Upload cả ZIP, `SHA256SUMS.txt` và `INSTALL.txt` trong thư mục đầu ra lên GitHub Release, kèm hướng dẫn Open Anyway trong release notes. ZIP giữ cấu trúc bundle, quyền executable và chữ ký; không phát hành app bằng cách commit từng file trong `.app`. Nhãn `unnotarized` trong tên ZIP nhắc rõ bản này **vẫn có cảnh báo Gatekeeper**. SHA-256 chỉ giúp đối chiếu file với bản phát hành, không thay thế chứng chỉ Apple.
+
+### Phát hành bằng Developer ID và notarization
+
+Cần Apple Developer Program, chứng chỉ **Developer ID Application** cùng private key trong Keychain, và thông tin đăng nhập dịch vụ notarization. Không dùng Apple Development hoặc chứng chỉ tự ký thay thế Developer ID. Tham khảo [Developer ID](https://developer.apple.com/developer-id/) và [quy trình notarization](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow).
+
+Lưu thông tin notarization qua lời nhắc tương tác trên máy của bạn; không đưa mật khẩu vào repo:
+
+```sh
+security find-identity -v -p codesigning
+xcrun notarytool store-credentials boundary-bridge-notary
+./scripts/package-release.sh \
+  --app 'dist/v1.1.2/Boundary Bridge.app' \
+  --output dist/releases/1.1.2-notarized \
+  --identity 'Developer ID Application: YOUR NAME (TEAMID)' \
+  --notary-profile boundary-bridge-notary
+```
+
+Script thao tác trên bản sao, giữ nguyên app nguồn và Boundary CLI do nhà cung cấp ký. Script ký app với hardened runtime/timestamp, gửi Apple kiểm tra, yêu cầu trạng thái `Accepted`, gắn ticket bằng stapler, kiểm tra Gatekeeper rồi mới tạo ZIP cuối cùng. Nếu thiếu chứng chỉ hoặc Apple từ chối, script dừng; không tự chuyển sang ad-hoc. macOS vẫn có thể hỏi xác nhận mở app tải từ Internet ở lần đầu ngay cả khi notarization thành công.
+
+Script từ chối ghi đè artifact đã có; dùng thư mục đầu ra mới cho mỗi lần đóng gói. Luồng Developer ID cần được chạy và kiểm tra trên máy đã cấu hình chứng chỉ; chưa được xác nhận với bản phát hành hiện tại.
 
 ## Tài liệu giao thức
 
